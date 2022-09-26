@@ -1,0 +1,182 @@
+<!--
+ * @Author: chenchuhua 3361694095@qq.com
+ * @Date: 2022-09-26 14:39:35
+ * @LastEditors: chenchuhua 3361694095@qq.com
+ * @LastEditTime: 2022-09-26 16:52:33
+ * @FilePath: \three.js\examples\test1.html
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模拟太阳地球月亮运动</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="c2d" class="c2d" width="1000" height="500"></canvas>
+  <script type="module">
+    // 官网地址
+    import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js'
+    import { OrbitControls } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/controls/OrbitControls.js'
+
+
+
+
+    const canvas = document.querySelector('#c2d')
+    // 渲染器
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+
+    const fov = 40 // 视野范围
+    const aspect = 2 // 相机默认值 画布的宽高比
+    const near = 0.1 //进平面
+    const far = 1000 // 远平面
+
+    let time = Date.now() * 0.0004
+
+
+    // 透视投影相机
+    const camera = new THREE.PerspectiveCamera(fov, aspect, near, far)
+
+    // 相机位置
+    camera.position.set(0, 0, 50)
+    camera.up.set(0, 0, 1)
+    camera.lookAt(0, 0, 0)
+    // 控制相机
+    const controls = new OrbitControls(camera, canvas)
+    controls.update()
+
+    // 纹理加载器
+    const loader = new THREE.TextureLoader()
+    // 创建场景
+    const scene = new THREE.Scene()
+
+    const color = 0xffffff
+    const intensity = 1
+    // 创建光源
+    const light = new THREE.PointLight(color, intensity)
+    // 将光源添加到场景中
+    scene.add(light)
+
+
+
+    const bgTexture = loader.load('./sky.png')
+    scene.background = bgTexture
+
+    // 创建一个球几何体，太阳、地球、月亮都是球形，我们可以公用一个球体。
+    // 使用基础材质加载太阳纹理。因为灯光是点光源，发光点在中心，太阳也在中心，使用其他材质是无法接收光源。
+    // 太阳比其他球体大，放大3倍。
+
+    // 添加太阳
+    // 物体网格对象
+    const objects = []
+    // 一球多用
+    const radius = 2
+    const widthSegments = 36
+    const heightSegment = 36
+    const sphereGeometry = new THREE.SphereGeometry(radius, widthSegments, heightSegment)
+
+    // 太阳
+    const sunTexture = loader.load('./sun.png')
+    const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture })
+    const sunMesh = new THREE.Mesh(sphereGeometry, sunMaterial)
+    // 放大三倍
+    sunMesh.scale.set(3, 3, 3)
+    // scene.add(sunMesh)
+    // 放入控制对象
+    objects.push(sunMesh)
+
+
+
+    // 添加地球
+    const earthTexture = loader.load('./earth.png')
+    const earthMaterial = new THREE.MeshPhongMaterial({ map: earthTexture })
+    const earthMesh = new THREE.Mesh(sphereGeometry, earthMaterial)
+    // earthMesh.position.x = 20
+    // scene.add(earthMesh)
+    // 放入控制对象
+    // objects.push(earthMesh)
+
+    // 可以看到太阳和地球都在自转，但地球并没有绕着太阳转。
+    // 如果我们通过计算的方式修改地球的全局坐标围绕太阳转是可以的，但是这样很麻烦。这里我们添加一个新场景太阳系，把地球和太阳都放入场景中，旋转太阳系这个场景，因为太阳在中心，实现的效果就是地球围绕太阳转。
+    // 注释掉 scene.add(sunMesh)  scene.add(earthMesh)
+
+    // 太阳系 物体对象
+    const solarSystem = new THREE.Object3D()
+    scene.add(solarSystem)
+    objects.push(solarSystem)
+    solarSystem.add(sunMesh)
+    solarSystem.add(earthMesh)
+
+    // 添加月球
+    // 同样的月球要围绕地球转，添加一个地月系到太阳系中旋转。
+    // 注释掉 earthMesh.position.x = 20  solarSystem.add(earthMesh)
+
+    // 地月系 - 物体对象
+    const landOrbit = new THREE.Object3D()
+    landOrbit.position.x = 20
+    solarSystem.add(landOrbit)
+    objects.push(landOrbit)
+
+    // 定位地月系位置到原来地球的位置放入太阳系中，取消地球的定位和取消放入太阳系中。
+    const moonTexture = loader.load('./moon.png') 
+    const moonMaterial = new THREE.MeshPhongMaterial({map:moonTexture})
+    const moonMesh = new THREE.Mesh(sphereGeometry,moonMaterial)
+    moonMesh.scale.set(0.5,0.5,0.5)
+    moonMesh.position.x=5
+    objects.push(moonMesh)
+
+    // 加入地月系
+    landOrbit.add(earthMesh)
+    landOrbit.add(moonMesh)
+    
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+    function render() {
+
+      time = Date.now() * 0.0004;
+      //在渲染循环中添加，使网格对象(objects)中的物体旋转。
+      objects.forEach((obj) => {
+        obj.rotation.y += 0.01
+      })
+
+      // 加载渲染器
+      renderer.render(scene, camera)
+      // 开始动画
+
+      requestAnimationFrame(render)
+
+    }
+    // 开始渲染
+    requestAnimationFrame(render)
+
+
+
+
+
+  </script>
+</body>
+
+</html>
